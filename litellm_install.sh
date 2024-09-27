@@ -17,14 +17,14 @@ fi
 # 检查Docker是否安装
 if ! command -v docker &> /dev/null; then
     echo "Docker未安装，正在安装..."
-    sudo apt update
-    sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg
-    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-    sudo apt update
-    sudo apt install -y docker-ce
-    sudo systemctl start docker
-    sudo systemctl enable docker
+    sudo apt update || { echo "更新软件包列表失败"; exit 1; }
+    sudo apt install -y apt-transport-https ca-certificates curl software-properties-common || { echo "安装依赖失败"; exit 1; }
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker.gpg || { echo "下载Docker GPG密钥失败"; exit 1; }
+    sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" || { echo "添加Docker仓库失败"; exit 1; }
+    sudo apt update || { echo "更新软件包列表失败"; exit 1; }
+    sudo apt install -y docker-ce || { echo "安装Docker失败"; exit 1; }
+    sudo systemctl start docker || { echo "启动Docker服务失败"; exit 1; }
+    sudo systemctl enable docker || { echo "启用Docker服务失败"; exit 1; }
 else
     echo "Docker已安装"
     sudo docker --version
@@ -34,9 +34,9 @@ fi
 if ! command -v docker-compose &> /dev/null; then
     echo "Docker Compose未安装，正在安装..."
     DOCKER_COMPOSE_VERSION="v2.24.6"
-    sudo curl -L "https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    sudo chmod +x /usr/local/bin/docker-compose
-    sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+    sudo curl -L "https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose || { echo "下载Docker Compose失败"; exit 1; }
+    sudo chmod +x /usr/local/bin/docker-compose || { echo "设置Docker Compose执行权限失败"; exit 1; }
+    sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose || { echo "创建Docker Compose符号链接失败"; exit 1; }
 else
     echo "Docker Compose已安装"
     docker-compose --version
@@ -50,6 +50,9 @@ read -p "请输入 LITELLM_MASTER_KEY（你调用使用的APIKEY）: " LITELLM_M
 read -p "请输入 AWS Access Key ID: " AWS_ACCESS_KEY_ID
 read -p "请输入 AWS Secret Access Key: " AWS_SECRET_ACCESS_KEY
 read -p "请输入 AWS Region Name: " AWS_REGION_NAME
+
+# 创建prometheus.yml
+touch "$DIRECTORY/prometheus.yml"
 
 # 创建docker-compose.yml
 cat <<EOL > "$DIRECTORY/docker-compose.yml"
@@ -148,10 +151,11 @@ EOL
 # 检查Docker是否在运行
 if [ "$(docker ps -q -f name=litellm)" ]; then
     echo "Docker容器正在运行，正在停止..."
-    sudo docker-compose -f "$DIRECTORY/docker-compose.yml" down
+    sudo docker-compose -f "$DIRECTORY/docker-compose.yml" down || { echo "停止Docker容器失败"; exit 1; }
 else
     echo "Docker容器未运行，正在拉取最新镜像并启动..."
-    sudo docker-compose -f "$DIRECTORY/docker-compose.yml" pull && sudo docker-compose -f "$DIRECTORY/docker-compose.yml" up -d
+    sudo docker-compose -f "$DIRECTORY/docker-compose.yml" pull || { echo "拉取Docker镜像失败"; exit 1; }
+    sudo docker-compose -f "$DIRECTORY/docker-compose.yml" up -d || { echo "启动Docker容器失败"; exit 1; }
 fi
 
 echo "设置完成，litellm已被配置。"
