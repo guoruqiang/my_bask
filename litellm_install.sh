@@ -2,13 +2,16 @@
 
 # 获取当前用户
 USER_NAME=$(whoami)
+USER_HOME=$(eval echo ~$USER_NAME)
 
-# 检查是否是非root账户
+# 输出当前用户信息
+echo "当前用户是: $USER_NAME"
+
+# 确定目录路径，根据用户类型选择
 if [ "$USER_NAME" = "root" ]; then
-    echo "当前用户是root，脚本不会执行。请使用非root用户运行此脚本。"
-    exit 1
+    DIRECTORY="$USER_HOME/litellm"
 else
-    echo "当前用户是: $USER_NAME"
+    DIRECTORY="/home/$USER_NAME/litellm"
 fi
 
 # 检查Docker是否安装
@@ -38,9 +41,6 @@ else
     echo "Docker Compose已安装"
     docker-compose --version
 fi
-
-# 设置目录路径
-DIRECTORY="/home/$USER_NAME/litellm"
 
 # 创建目录
 mkdir -p "$DIRECTORY" || { echo "无法创建目录: $DIRECTORY"; exit 1; }
@@ -110,7 +110,7 @@ EOL
 
 # 检查Docker是否在运行
 if [ "$(docker ps -q -f name=litellm)" ]; then
-    echo "Docker容器 running，正在停止..."
+    echo "Docker容器正在运行，正在停止..."
     sudo docker-compose -f "$DIRECTORY/docker-compose.yml" down
 else
     echo "Docker容器未运行，正在拉取最新镜像并启动..."
