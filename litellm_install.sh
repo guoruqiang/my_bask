@@ -56,17 +56,54 @@ cat <<EOL > "$DIRECTORY/docker-compose.yml"
 # compose.yaml
 services:
   litellm:
+    build:
+      context: .
+      args:
+        target: runtime
     image: ghcr.io/berriai/litellm:main-latest
     environment:
+      DATABASE_URL: "postgresql://llmproxy:dbpassword9090@db:5432/litellm"
+      STORE_MODEL_IN_DB: "True" # allows adding models to proxy via UI
       LITELLM_MASTER_KEY: "$LITELLM_MASTER_KEY"
     entrypoint: "litellm"
     ports:
-      - "4000:4000"
+      - "4000:4000" 
     command: ["--port", "4000", "--config", "/app/config.yaml", "--detailed_debug"]
     volumes:
       - ./litellm_config.yaml:/app/config.yaml:ro
       - ~/.aws:/root/.aws:ro
     restart: always
+    
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: llmproxy
+      POSTGRES_PASSWORD: dbpassword9090
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d litellm -U llmproxy"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+  
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - prometheus_data:/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+    restart: always
+
+volumes:
+  prometheus_data:
+    driver: local
+
 EOL
 
 # 创建litellm_config.yaml
