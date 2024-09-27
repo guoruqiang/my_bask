@@ -158,4 +158,4 @@ else
     sudo docker-compose -f "$DIRECTORY/docker-compose.yml" up -d || { echo "启动Docker容器失败"; exit 1; }
 fi
 
-echo "设置完成，litellm已被配置。"
+echo "设置完成，litellm已被配置。请使用IP:4000访问，访问UI，请使用ip:4000/ui"
