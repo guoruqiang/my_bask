@@ -146,6 +146,10 @@ model_list:
     litellm_params:
       model: anthropic.claude-3-haiku-20240307-v1:0
       <<: *aws_credentials
+  - model_name: claude-3-5-sonnet-20241022
+    litellm_params:
+      model: anthropic.claude-3-5-sonnet-20241022-v2:0
+      <<: *aws_credentials
 EOL
 
 # 检查Docker是否在运行
